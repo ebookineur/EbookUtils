@@ -1,1 +1,4 @@
 This repository contains a set of ruby scripts which can be useful to create and manage ebook files in the .epub or .mobi format
+
+fdx2ebook
+Utility to convert a Final Draft scenarion (.fdx) into ebook files
