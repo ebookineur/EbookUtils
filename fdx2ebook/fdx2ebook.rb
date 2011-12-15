@@ -22,6 +22,7 @@ class Screenplay
     attr_reader :baseName
     attr :title, true
     attr :author, true
+    attr :cover, true
 
     # input: .fdx input file
     def initialize(fdxFile)
@@ -116,6 +117,13 @@ class BaseGenerator
         p(@bodyFile,"transition", text)
     end
 
+    # create parent firectory of a file 
+    def createDirectoryForFile(fileName)
+        dirName=File.dirname(fileName)
+        if (! File.directory?(dirName))    
+            FileUtils.mkdir_p(dirName)
+        end
+    end
 end
 
 #
@@ -129,6 +137,8 @@ class MobiGenerator < BaseGenerator
         outputdir="__mobi"
         cleanDirectory(outputdir)
         Dir.mkdir(outputdir)
+        FileUtils.cp(@screenplay.cover,outputdir)
+
         Dir.chdir(outputdir) do
             prepare_css
             prepare_opf
@@ -235,14 +245,10 @@ END
 END
 ####/
     end
-
+    
     def prepare_css
         File.open('main.css','w') do |f|
             f.puts <<-'ENDTEXT'
-body {
-  font-family: "Courier New", Monospace;
-}
-
 p.character {
   text-indent: 0em;
   text-align: center;
@@ -291,7 +297,7 @@ p.action {
     <meta name="cover" content="id-cover-image"/>
   </metadata>
   <manifest>
-    <item id="id-cover-image" href="cover.jpg" media-type="image/jpeg"/>
+    <item id="id-cover-image" href="#{@screenplay.cover}" media-type="image/jpeg"/>
     <item id="ncx" href="root.ncx" media-type="application/x-dtbncx+xml"/>
     <item id="css-main" href="main.css" media-type="text/css"/>
     <item id="book" href="book.html" media-type="application/xhtml+xml"/>
@@ -355,8 +361,11 @@ class EpubGenerator < BaseGenerator
         outputdir="__epub"
         cleanDirectory(outputdir)
         Dir.mkdir(outputdir)
+        FileUtils.cp(@screenplay.cover,outputdir)
         Dir.chdir(outputdir) do
-            prepare_css
+            prepare_containerXml("META-INF/container.xml")
+            prepare_css("OPS/css/main.css")
+            prepare_titlePage("OPS/title.xml")
             
             output_path="../#{@screenplay.baseName}.epub"
             mimetype = Zip::ZipOutputStream::open(output_path) do |os|
@@ -371,12 +380,45 @@ class EpubGenerator < BaseGenerator
         end
     end
     
-
-    def prepare_css
-        File.open('main.css','w') do |f|
+    def prepare_containerXml(fileName)
+        createDirectoryForFile(fileName)
+        File.open(fileName,'w') do |f|
             f.puts <<-'ENDTEXT'
-body {
-  font-family: "Courier New", Monospace;
+<?xml version="1.0" encoding="UTF-8" ?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OPS/root.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>
+            ENDTEXT
+        end
+    end
+    
+    def prepare_css(fileName)
+        createDirectoryForFile(fileName)
+        File.open(fileName,'w') do |f|
+            f.puts <<-'ENDTEXT'
+p.coverTitle {
+    margin: 10;
+    padding: 10;
+    height: 150;
+    font-size:250%;
+    text-align: center;
+}
+
+p.coverSubtitle {
+    margin: 0;
+    padding: 0;
+    height: 150;
+    font-size:200%;
+    text-align: center;
+}
+
+p.coverAuthor {
+    margin: 10;
+    padding: 10;
+    height: 150;
+    text-align: right;
 }
 
 p.character {
@@ -408,6 +450,31 @@ p.action {
             ENDTEXT
         end 
     end    
+    
+    def prepare_titlePage(fileName)
+        createDirectoryForFile(fileName)
+        File.open(fileName,'w') do |f|
+            f.puts <<-ENDTEXT
+<?xml version="1.0" encoding="UTF-8" ?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+  <link rel="stylesheet" href="css/main.css" type="text/css" />
+  <title>Title Page</title>
+  <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+</head>
+<body>
+<div class="document">
+<p class="coverTitle">#{@screenplay.title}</p>
+<p class="coverAuthor">#{@screenplay.author}</p>
+</div>
+</body>
+</html>
+            ENDTEXT
+###"            
+        end
+    end
+    
+    
 end
 
 optparse = OptionParser.new do|opts|
@@ -429,6 +496,11 @@ optparse = OptionParser.new do|opts|
    $options[:author] = ""
    opts.on( '-a', '--author author', 'the author of the script' ) do |author|
      $options[:author] = author
+   end
+ 
+   $options[:cover] = ""
+   opts.on( '-c', '--cover file.jpg', 'cover file' ) do |cover|
+     $options[:cover] = cover
    end
  
    $options[:keep] = false
@@ -489,9 +561,27 @@ if ($options[:author].length == 0)
     exit
 end
 
+if ($options[:cover].length == 0)
+    puts "missing cover parameter"
+    exit
+end
+
+if (! File.exist?($options[:cover])) 
+    puts "the cover file (#{$options[:cover]}) does not exist"
+    exit
+end
+
+if (File.extname($options[:cover]) != ".jpg" && File.extname($options[:cover]) != ".jpeg")
+    puts "Only jpeg files are supported for cover images"
+    exit
+end
+
+
+
 screenplay=Screenplay.new(fdxFileName)
 screenplay.title=$options[:title]
 screenplay.author=$options[:author]
+screenplay.cover=$options[:cover]
 
 if (! $options[:nomobi])
     generator=MobiGenerator.new
