@@ -4,9 +4,12 @@
 # Ruby script to parse a FinalDraft file (.fdx) and convert it
 # into ebook formats: epub and mobi
 #
+# sudo gem install rubyzip
+#
 require "rubygems"
 require "rexml/document"
 require "pathname"
+require "zip/zip"
 require "optparse"
 
 # This hash will hold all of the options
@@ -92,9 +95,32 @@ class BaseGenerator
     def a(file, name)
         file.puts "<a name=\"#{name}\"/>"
     end
+    
+    def fdx_action(text)
+        p(@bodyFile,"action", text)
+    end
+
+    def fdx_character(text)
+        p(@bodyFile,"character", text)
+    end
+
+    def fdx_parenthetical(text)
+        p(@bodyFile,"parenthetical", text)
+    end
+
+    def fdx_dialogue(text)
+        p(@bodyFile,"dialogue", text)
+    end
+
+    def fdx_transition(text)
+        p(@bodyFile,"transition", text)
+    end
 
 end
 
+#
+# .mobi generator
+#
 class MobiGenerator < BaseGenerator
     def generate(screenplay)
         @screenplay=screenplay
@@ -207,28 +233,9 @@ END
       <content src="book.html##{sceneId}"/>
     </navPoint>
 END
+####/
     end
 
-    def fdx_action(text)
-        p(@bodyFile,"action", text)
-    end
-
-    def fdx_character(text)
-        p(@bodyFile,"character", text)
-    end
-
-    def fdx_parenthetical(text)
-        p(@bodyFile,"parenthetical", text)
-    end
-
-    def fdx_dialogue(text)
-        p(@bodyFile,"dialogue", text)
-    end
-
-    def fdx_transition(text)
-        p(@bodyFile,"transition", text)
-    end
-    
     def prepare_css
         File.open('main.css','w') do |f|
             f.puts <<-'ENDTEXT'
@@ -332,19 +339,76 @@ HERE
     </navPoint>
 
 HERE
+###### /
         end
     end
 end
 
-###### /
+#
+# .epub generator
+#
+class EpubGenerator < BaseGenerator
+    def generate(screenplay)
+        @screenplay=screenplay
+        parser=FdxParser.new(@screenplay.fdxFile)
+        
+        outputdir="__epub"
+        cleanDirectory(outputdir)
+        Dir.mkdir(outputdir)
+        Dir.chdir(outputdir) do
+            prepare_css
+            
+            output_path="../#{@screenplay.baseName}.epub"
+            mimetype = Zip::ZipOutputStream::open(output_path) do |os|
+                os.put_next_entry("mimetype", nil, nil, Zip::ZipEntry::STORED, Zlib::NO_COMPRESSION)
+                os << "application/epub+zip"
+            end
+            zipfile = Zip::ZipFile.open(output_path)
+            Dir.glob('**/*').each do |path|
+                zipfile.add(path, path)
+            end
+            zipfile.commit
+        end
+    end
+    
 
-#screenplay=Screenplay.new("TheSixthSense.fdx")
-#screenplay.title="The Sixth Sense"
-#screenplay.author="M. Night Shyamalan"
+    def prepare_css
+        File.open('main.css','w') do |f|
+            f.puts <<-'ENDTEXT'
+body {
+  font-family: "Courier New", Monospace;
+}
 
-#generator=MobiGenerator.new
-#generator.generate(screenplay,"ebook_mobi.html")
+p.character {
+  text-indent: 0em;
+  text-align: center;
+  margin-top: 10px;
+}
 
+p.parenthetical {
+  margin-left: 50px; 
+  text-indent: 0em;
+  font-style: italic;
+}
+
+p.dialogue {
+  margin-left: 50px; 
+  text-indent: 0em;
+}
+
+p.sceneheading: {
+  margin-top: 10px;
+  text-indent: 0em;
+}
+
+p.action {
+  text-indent: 0em;
+  margin-top: 10px;
+}
+            ENDTEXT
+        end 
+    end    
+end
 
 optparse = OptionParser.new do|opts|
    # Set a banner, displayed at the top
@@ -367,10 +431,19 @@ optparse = OptionParser.new do|opts|
      $options[:author] = author
    end
  
-   # Define the options, and what they do
    $options[:keep] = false
    opts.on( '-k', '--keep', 'Keep the generated file' ) do
      $options[:keep] = true
+   end
+ 
+   $options[:nomobi] = false
+   opts.on( '-1', '--nomobi', 'skip the .mobi file generation' ) do
+     $options[:nomobi] = true
+   end
+ 
+   $options[:noepub] = false
+   opts.on( '-2', '--noepub', 'skip the .epub file generation' ) do
+     $options[:noepub] = true
    end
  
    # This displays the help screen, all programs are
@@ -420,5 +493,13 @@ screenplay=Screenplay.new(fdxFileName)
 screenplay.title=$options[:title]
 screenplay.author=$options[:author]
 
-generator=MobiGenerator.new
-generator.generate(screenplay)
+if (! $options[:nomobi])
+    generator=MobiGenerator.new
+    generator.generate(screenplay)
+end
+
+
+if (! $options[:noepub])
+    generator=EpubGenerator.new
+    generator.generate(screenplay)
+end
