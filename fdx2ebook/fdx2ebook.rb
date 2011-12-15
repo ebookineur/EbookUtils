@@ -7,15 +7,23 @@
 require "rubygems"
 require "rexml/document"
 require "pathname"
+require "optparse"
+
+# This hash will hold all of the options
+# parsed from the command-line by
+# OptionParser.
+$options={}
 
 class Screenplay 
     attr_reader :fdxFile
+    attr_reader :baseName
     attr :title, true
     attr :author, true
 
     # input: .fdx input file
     def initialize(fdxFile)
         @fdxFile=fdxFile
+        @baseName=File.basename(fdxFile,".fdx")
     end
 end
 
@@ -89,7 +97,7 @@ class BaseGenerator
 end
 
 class MobiGenerator < BaseGenerator
-    def generate(screenplay,output)
+    def generate(screenplay)
         @screenplay=screenplay
         parser=FdxParser.new(@screenplay.fdxFile)
         
@@ -107,7 +115,7 @@ class MobiGenerator < BaseGenerator
             parser.parse(self) 
             @bodyFile.close
             @tocFile.close
-        @ncxFile.puts <<-END
+            @ncxFile.puts <<-END
   </navMap>
 </ncx>
 END
@@ -153,6 +161,28 @@ END
             htmlFile.puts "</body>"
             htmlFile.puts "</html>"
             htmlFile.close
+            
+            # we run kindlegen to generate the .mobi file
+            cmdeLine = "kindlegen ebook.opf"            
+            puts "Running command: #{cmdeLine}"
+            IO.popen(cmdeLine) { |io|
+                io.each do |line|
+                    if ($options[:verbose])
+                        puts line
+                    end
+                end                
+            }
+            status = $?
+            if ($options[:verbose])
+                puts "Status code is #{status}"
+            end
+            # test the result of the build from $?
+            # pierre:unfortunately the status code is not reliable
+            #    to decide if the generation was correct or not
+            #if (status != 0)
+            #    puts "kindlegen failed"
+            #end
+            FileUtils.cp("ebook.mobi","../#{@screenplay.baseName}.mobi")
         end
     end
 
@@ -298,10 +328,73 @@ HERE
     end
 end
 
-screenplay=Screenplay.new("../TheSixthSense.fdx")
-screenplay.title="The Sixth Sense"
-screenplay.author="M. Night Shyamalan"
+###### /
+
+#screenplay=Screenplay.new("TheSixthSense.fdx")
+#screenplay.title="The Sixth Sense"
+#screenplay.author="M. Night Shyamalan"
+
+#generator=MobiGenerator.new
+#generator.generate(screenplay,"ebook_mobi.html")
+
+
+optparse = OptionParser.new do|opts|
+   # Set a banner, displayed at the top
+   # of the help screen.
+   opts.banner = "Usage: fdx2ebook.rb [options] <file.fdx>]"
+ 
+   # Define the options, and what they do
+   $options[:verbose] = false
+   opts.on( '-v', '--verbose', 'Output more information' ) do
+     $options[:verbose] = true
+   end
+ 
+   $options[:title] = ""
+   opts.on( '-t', '--title title', 'the title of the script' ) do |title|
+     $options[:title] = title
+   end
+ 
+   $options[:author] = ""
+   opts.on( '-a', '--author author', 'the author of the script' ) do |author|
+     $options[:author] = author
+   end
+ 
+   # This displays the help screen, all programs are
+   # assumed to have this option.
+   opts.on( '-h', '--help', 'Display this screen' ) do
+     puts opts
+     exit
+   end
+end
+ 
+# Parse the command-line. Remember there are two forms
+# of the parse method. The 'parse' method simply parses
+# ARGV, while the 'parse!' method parses ARGV and removes
+# any options found there, as well as any parameters for
+# the options. What's left is the list of files to resize.
+optparse.parse!
+
+# Check the remaining of the command line
+if (ARGV.size > 0) 
+    fdxFileName = ARGV[0]
+else
+    puts "missing fdx file name"
+    exit
+end
+
+if ($options[:title].length == 0)
+    puts "missing title parameter"
+    exit
+end
+
+if ($options[:author].length == 0)
+    puts "missing author parameter"
+    exit
+end
+
+screenplay=Screenplay.new(fdxFileName)
+screenplay.title=$options[:title]
+screenplay.author=$options[:author]
 
 generator=MobiGenerator.new
-generator.generate(screenplay,"ebook_mobi.html")
-
+generator.generate(screenplay)
