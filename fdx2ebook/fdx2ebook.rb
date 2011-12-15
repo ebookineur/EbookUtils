@@ -75,7 +75,6 @@ end
 
 class BaseGenerator
     def cleanDirectory(directory)
-        puts "Cleaning up #{directory}"
         if (File.directory?(directory))
             FileUtils.remove_dir(directory)
         end
@@ -163,8 +162,11 @@ END
             htmlFile.close
             
             # we run kindlegen to generate the .mobi file
-            cmdeLine = "kindlegen ebook.opf"            
-            puts "Running command: #{cmdeLine}"
+            cmdeLine = "kindlegen ebook.opf"     
+             
+            if ($options[:verbose])
+                puts "Running command: #{cmdeLine}"
+            end
             IO.popen(cmdeLine) { |io|
                 io.each do |line|
                     if ($options[:verbose])
@@ -183,6 +185,12 @@ END
             #    puts "kindlegen failed"
             #end
             FileUtils.cp("ebook.mobi","../#{@screenplay.baseName}.mobi")
+        end
+        
+        puts "Kindle file available:#{@screenplay.baseName}.mobi"
+        
+        if (! $options[:keep])
+            cleanDirectory(outputdir)
         end
     end
 
@@ -359,6 +367,12 @@ optparse = OptionParser.new do|opts|
      $options[:author] = author
    end
  
+   # Define the options, and what they do
+   $options[:keep] = false
+   opts.on( '-k', '--keep', 'Keep the generated file' ) do
+     $options[:keep] = true
+   end
+ 
    # This displays the help screen, all programs are
    # assumed to have this option.
    opts.on( '-h', '--help', 'Display this screen' ) do
@@ -379,6 +393,16 @@ if (ARGV.size > 0)
     fdxFileName = ARGV[0]
 else
     puts "missing fdx file name"
+    exit
+end
+
+if (File.extname(fdxFileName) != ".fdx")
+    puts "Only .fdx extension are supported"
+    exit
+end
+
+if (! File.exist?(fdxFileName)) 
+    puts "the fdx file (#{fdxFileName}) does not exist"
     exit
 end
 
