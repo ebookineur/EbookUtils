@@ -257,19 +257,22 @@ p.character {
 }
 
 p.parenthetical {
-  margin-left: 50px; 
+  margin-left: 20em; 
   text-indent: 0em;
   font-style: italic;
+  font-style: italic;
+  font-size: 80%;
 }
 
 p.dialogue {
-  margin-left: 50px; 
+  margin-left: 10em; 
   text-indent: 0em;
 }
 
-p.sceneheading: {
-  margin-top: 10px;
+p.sceneheading {
+  margin-top: 20px;
   text-indent: 0em;
+  font-weight: bold;
 }
 
 p.action {
