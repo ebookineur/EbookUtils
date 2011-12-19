@@ -2,3 +2,13 @@ This repository contains a set of ruby scripts which can be useful to create and
 
 fdx2ebook
 Utility to convert a Final Draft scenarion (.fdx) into ebook files
+
+Usage: fdx2ebook.rb [options] <file.fdx>]
+    -v, --verbose                    Output more information
+    -t, --title title                the title of the script
+    -a, --author author              the author of the script
+    -c, --cover file.jpg             cover file
+    -k, --keep                       Keep the generated file
+    -1, --nomobi                     skip the .mobi file generation
+    -2, --noepub                     skip the .epub file generation
+    -h, --help                       Display this screen
