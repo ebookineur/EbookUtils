@@ -453,26 +453,33 @@ END
         createDirectoryForFile(fileName)
         File.open(fileName,'w') do |f|
             f.puts <<-'ENDTEXT'
+            
+p {
+    line-height:120%;
+    margin: 0px;
+    padding: 0px;
+}
+            
 p.coverTitle {
-    margin: 10;
-    padding: 10;
-    height: 150;
+    margin: 10px;
+    padding: 10px;
+    height: 150px;
     font-size:250%;
     text-align: center;
 }
 
 p.coverSubtitle {
-    margin: 0;
-    padding: 0;
-    height: 150;
+    margin: 0px;
+    padding: 0px;
+    height: 150px;
     font-size:200%;
     text-align: center;
 }
 
 p.coverAuthor {
-    margin: 10;
-    padding: 10;
-    height: 150;
+    margin: 10px;
+    padding: 10px;
+    height: 150px;
     text-align: right;
 }
 
@@ -486,6 +493,7 @@ p.parenthetical {
   margin-left: 50px; 
   text-indent: 0em;
   font-style: italic;
+  font-size: 80%;
 }
 
 p.dialogue {
@@ -493,9 +501,10 @@ p.dialogue {
   text-indent: 0em;
 }
 
-p.sceneheading: {
-  margin-top: 10px;
+p.sceneheading {
+  margin-top: 20px;
   text-indent: 0em;
+  font-weight: bold;
 }
 
 p.action {
