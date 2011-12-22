@@ -291,6 +291,11 @@ END
   text-indent: 0em;
   margin-top: 10px;
 }
+
+.transition {
+  text-align: right;
+}
+
             ENDTEXT
         end 
     end
@@ -430,7 +435,12 @@ END
                 end
               end
             }
-            
+        end
+        
+        puts "Epub file available:#{@screenplay.baseName}.epub"
+        
+        if (! $options[:keep])
+            cleanDirectory(outputdir)
         end
     end
 
@@ -479,7 +489,7 @@ p {
     padding: 0px;
 }
             
-p.coverTitle {
+.coverTitle {
     margin: 10px;
     padding: 10px;
     height: 150px;
@@ -487,7 +497,7 @@ p.coverTitle {
     text-align: center;
 }
 
-p.coverSubtitle {
+.coverSubtitle {
     margin: 0px;
     padding: 0px;
     height: 150px;
@@ -495,41 +505,46 @@ p.coverSubtitle {
     text-align: center;
 }
 
-p.coverAuthor {
+.coverAuthor {
     margin: 10px;
     padding: 10px;
     height: 150px;
     text-align: right;
 }
 
-p.character {
+.character {
   text-indent: 0em;
   text-align: center;
   margin-top: 10px;
 }
 
-p.parenthetical {
+.parenthetical {
   margin-left: 50px; 
   text-indent: 0em;
   font-style: italic;
   font-size: 80%;
 }
 
-p.dialogue {
+.dialogue {
   margin-left: 50px; 
   text-indent: 0em;
 }
 
-p.sceneheading {
-  margin-top: 20px;
+.sceneheading {
+  margin-top: 100px;
   text-indent: 0em;
   font-weight: bold;
 }
 
-p.action {
+.action {
   text-indent: 0em;
   margin-top: 10px;
 }
+
+.transition {
+  text-align: right;
+}
+
             ENDTEXT
         end 
     end    
