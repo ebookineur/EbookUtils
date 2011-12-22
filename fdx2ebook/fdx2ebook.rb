@@ -93,6 +93,14 @@ class BaseGenerator
         file.puts "<tt class=\"#{clazz}\">#{text}</tt>"
     end
     
+    def blockquote(file,clazz, text)
+        file.puts "<blockquote class=\"#{clazz}\">#{text}</blockquote>"
+    end
+    
+    def blockquote2(file,clazz, text)
+        file.puts "<blockquote><blockquote class=\"#{clazz}\">#{text}</blockquote></blockquote>"
+    end
+    
     def fdx_action(text)
         p(@bodyFile,"action", text)
     end
@@ -136,9 +144,9 @@ class MobiGenerator < BaseGenerator
         FileUtils.cp(@screenplay.cover,outputdir)
 
         Dir.chdir(outputdir) do
-            prepare_css
-            prepare_opf
-            prepare_ncx
+            prepare_css("main.css")
+            prepare_opf("ebook.opf")
+            prepare_ncx("root.ncx")
             
             @bodyFile = File.new("body.html", "w")
             @tocFile = File.new("toc.html", "w")
@@ -242,40 +250,44 @@ END
 ####/
     end
     
+    def fdx_dialogue(text)
+        blockquote2(@bodyFile,"dialogue", text)
+    end
+
+    def fdx_parenthetical(text)
+        blockquote2(@bodyFile,"parenthetical", text)
+    end
+    
     def a(file, name)
         file.puts "<a name=\"#{name}\"/>"
     end
     
     
-    def prepare_css
-        File.open('main.css','w') do |f|
+    def prepare_css(fileName)
+        createDirectoryForFile(fileName)
+        File.open(fileName,'w') do |f|
             f.puts <<-'ENDTEXT'
-p.character {
+.character {
   text-indent: 0em;
   text-align: center;
   margin-top: 10px;
 }
 
-p.parenthetical {
-  margin-left: 20em; 
-  text-indent: 0em;
-  font-style: italic;
+.parenthetical {
   font-style: italic;
   font-size: 80%;
 }
 
-p.dialogue {
-  margin-left: 10em; 
-  text-indent: 0em;
+.dialogue {
 }
 
-p.sceneheading {
-  margin-top: 20px;
+.sceneheading {
+  margin-top: 100px;
   text-indent: 0em;
   font-weight: bold;
 }
 
-p.action {
+.action {
   text-indent: 0em;
   margin-top: 10px;
 }
@@ -283,10 +295,12 @@ p.action {
         end 
     end
     
-    def prepare_opf
+    def prepare_opf(fileName)
+        createDirectoryForFile(fileName)
+
         t = Time.now
     
-        File.open('ebook.opf','w') do |f|
+        File.open(fileName,'w') do |f|
             f.puts <<-HERE
 <?xml version="1.0" encoding="UTF-8" ?>
 <package version="2.0" unique-identifier="bookId" xmlns="http://www.idpf.org/2007/opf">
@@ -318,10 +332,12 @@ HERE
     end
     
     
-    def prepare_ncx
+    def prepare_ncx(fileName)
+        createDirectoryForFile(fileName)
+
         t = Time.now
     
-        File.open('root.ncx','w') do |f|
+        File.open(fileName,'w') do |f|
             f.puts <<-HERE
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN"
