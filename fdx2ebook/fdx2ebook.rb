@@ -36,6 +36,7 @@ end
 # and pass the content to the generator 
 #
 class FdxParser
+    attr_reader :sceneCounter
     # input: .fdx input file
     def initialize(input)
         @input=Pathname.new(input).realpath
@@ -128,6 +129,53 @@ class BaseGenerator
             FileUtils.mkdir_p(dirName)
         end
     end
+    
+    def extraPage(fileName,isXml)
+        createDirectoryForFile(fileName)
+        File.open(fileName,'w') do |f|
+            if (isXml)
+                f.puts <<-'ENDTEXT'
+<?xml version="1.0" encoding="UTF-8" ?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+  <link rel="stylesheet" href="css/main.css" type="text/css" />
+  <title>For More</title>
+  <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+</head>
+            ENDTEXT
+####"            
+            else         
+                f.puts <<-'ENDTEXT'
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+  <link rel="stylesheet" href="main.css" type="text/css" />
+  <title>For More</title>
+  <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+</head>
+            ENDTEXT
+            end
+        end
+        File.open(fileName,'a') do |f|
+            f.puts <<-'ENDTEXT'
+<body>
+<div class="document">
+<h1>Want more?</h1>
+<p class="extra">If you want more free content like the one you just enjoyed, you can:</p>
+<ul>
+<li>Follow us on Twitter: @ebookineur</li>
+<li>Check our website at: http://www.ebookineur.com</li>
+</ul>
+<p class="extra">Feel free to send us comments, suggestions or just say hello at: pierre@ebookineur.com</p>
+<p class="extra">Thank you!</p>
+</div>
+</body>
+</html>            
+            ENDTEXT
+###"            
+        end
+    end
 end
 
 #
@@ -147,6 +195,7 @@ class MobiGenerator < BaseGenerator
             prepare_css("main.css")
             prepare_opf("ebook.opf")
             prepare_ncx("root.ncx")
+            extraPage("extra.html",false)
             
             @bodyFile = File.new("body.html", "w")
             @tocFile = File.new("toc.html", "w")
@@ -154,7 +203,13 @@ class MobiGenerator < BaseGenerator
             parser.parse(self) 
             @bodyFile.close
             @tocFile.close
+            @ncxFile.puts "    <navPoint id=\"more\" playOrder=\"#{parser.sceneCounter + 1}\">"
             @ncxFile.puts <<-END
+      <navLabel>
+        <text>Want more?</text>
+      </navLabel>
+      <content src="extra.html"/>
+    </navPoint>            
   </navMap>
 </ncx>
 END
@@ -296,6 +351,11 @@ END
   text-align: right;
 }
 
+.extra {
+  text-indent: 0em;
+  margin-top: 20px;
+}
+
             ENDTEXT
         end 
     end
@@ -324,6 +384,7 @@ END
     <item id="ncx" href="root.ncx" media-type="application/x-dtbncx+xml"/>
     <item id="css-main" href="main.css" media-type="text/css"/>
     <item id="book" href="book.html" media-type="application/xhtml+xml"/>
+    <item id="more" href="extra.html" media-type="application/xhtml+xml"/>
   </manifest>
   <spine toc="ncx"/>
   <guide>
@@ -395,11 +456,19 @@ class EpubGenerator < BaseGenerator
             prepare_coverPage("OPS/cover.xml")
             prepare_opf("OPS/root.opf")
             prepare_ncx("OPS/root.ncx")
+            extraPage("OPS/extra.xml",true)
+
             @ncxFile = File.new("OPS/root.ncx", "a")
             prepare_content("OPS/content.xml")
             @bodyFile = File.new("OPS/content.xml", "a")
             parser.parse(self) 
+            @ncxFile.puts "    <navPoint id=\"more\" playOrder=\"#{parser.sceneCounter + 1}\">"
             @ncxFile.puts <<-END
+      <navLabel>
+        <text>Want more?</text>
+      </navLabel>
+      <content src="extra.xml"/>
+    </navPoint>            
   </navMap>
 </ncx>
 END
@@ -483,12 +552,6 @@ END
         File.open(fileName,'w') do |f|
             f.puts <<-'ENDTEXT'
             
-p {
-    line-height:120%;
-    margin: 0px;
-    padding: 0px;
-}
-            
 .coverTitle {
     margin: 10px;
     padding: 10px;
@@ -543,6 +606,12 @@ p {
 
 .transition {
   text-align: right;
+}
+
+
+.extra {
+  text-indent: 0em;
+  margin-top: 20px;
 }
 
             ENDTEXT
@@ -619,17 +688,20 @@ p {
     <item id="titlepage" href="title.xml" media-type="application/xhtml+xml"/>
     <item id="css-main" href="css/main.css" media-type="text/css"/>
     <item id="content" href="content.xml" media-type="application/xhtml+xml"/>
+    <item id="more" href="extra.xml" media-type="application/xhtml+xml"/>
     <item id="ncx" href="root.ncx" media-type="application/x-dtbncx+xml"/>
   </manifest>
   <spine toc="ncx">
     <itemref idref="cover"/>
     <itemref idref="titlepage"/>
     <itemref idref="content"/>
+    <itemref idref="more"/>
   </spine>
   <guide>
     <reference type="cover" title="Cover" href="cover.xml"/>
     <reference type="title-page" title="Title Page" href="title.xml"/>
     <reference type="text" title="#{@screenplay.title}" href="content.xml"/>
+    <reference type="text" title="Want More?" href="extra.xml"/>
   </guide>
 </package>
 
